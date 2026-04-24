@@ -18,9 +18,12 @@ public class UserService {
         return users.values();
     }
 
-    // Новый метод для поиска пользователя по id
-    public Optional<User> findUserById(Long id) {
-        return Optional.ofNullable(users.get(id));
+    public User findUserById(Long id) {
+        User user = users.get(id);
+        if (user == null) {
+            throw new NotFoundException("Пользователь с id = " + id + " не найден");
+        }
+        return user;
     }
 
     public User create(User user) {
@@ -67,7 +70,7 @@ public class UserService {
     private long getNextId() {
         long currentMaxId = users.keySet()
                 .stream()
-                .mapToLong(id -> id)
+                .mapToLong(Long::longValue)
                 .max()
                 .orElse(0);
         return ++currentMaxId;

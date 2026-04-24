@@ -4,7 +4,6 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.catsgram.exception.ConditionsNotMetException;
 import ru.yandex.practicum.catsgram.exception.NotFoundException;
 import ru.yandex.practicum.catsgram.model.Post;
-import ru.yandex.practicum.catsgram.model.User;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -14,9 +13,8 @@ import java.util.Map;
 @Service
 public class PostService {
     private final Map<Long, Post> posts = new HashMap<>();
-    private final UserService userService;  // Внедрённая зависимость
+    private final UserService userService;
 
-    // Конструктор для внедрения UserService
     public PostService(UserService userService) {
         this.userService = userService;
     }
@@ -25,19 +23,24 @@ public class PostService {
         return posts.values();
     }
 
+    public Post findById(Long id) {
+        Post post = posts.get(id);
+        if (post == null) {
+            throw new NotFoundException("Пост с id = " + id + " не найден");
+        }
+        return post;
+    }
+
     public Post create(Post post) {
         if (post.getDescription() == null || post.getDescription().isBlank()) {
             throw new ConditionsNotMetException("Описание не может быть пустым");
         }
-
-        // Проверка существования автора
         Long authorId = post.getAuthorId();
         if (authorId == null) {
             throw new ConditionsNotMetException("Автор должен быть указан");
         }
-        // Используем новый метод findUserById
-        userService.findUserById(authorId)
-                .orElseThrow(() -> new ConditionsNotMetException("Автор с id = " + authorId + " не найден"));
+        // Проверяем существование автора (метод сам выбросит исключение, если пользователя нет)
+        userService.findUserById(authorId);
 
         post.setId(getNextId());
         post.setPostDate(Instant.now());
@@ -45,27 +48,27 @@ public class PostService {
         return post;
     }
 
-    private long getNextId() {
-        long currentMaxId = posts.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
-    }
-
     public Post update(Post newPost) {
         if (newPost.getId() == null) {
             throw new ConditionsNotMetException("Id должен быть указан");
         }
-        if (posts.containsKey(newPost.getId())) {
-            Post oldPost = posts.get(newPost.getId());
-            if (newPost.getDescription() == null || newPost.getDescription().isBlank()) {
-                throw new ConditionsNotMetException("Описание не может быть пустым");
-            }
-            oldPost.setDescription(newPost.getDescription());
-            return oldPost;
+        Post oldPost = posts.get(newPost.getId());
+        if (oldPost == null) {
+            throw new NotFoundException("Пост с id = " + newPost.getId() + " не найден");
         }
-        throw new NotFoundException("Пост с id = " + newPost.getId() + " не найден");
+        if (newPost.getDescription() == null || newPost.getDescription().isBlank()) {
+            throw new ConditionsNotMetException("Описание не может быть пустым");
+        }
+        oldPost.setDescription(newPost.getDescription());
+        return oldPost;
+    }
+
+    private long getNextId() {
+        long currentMaxId = posts.keySet()
+                .stream()
+                .mapToLong(Long::longValue)
+                .max()
+                .orElse(0);
+        return ++currentMaxId;
     }
 }
