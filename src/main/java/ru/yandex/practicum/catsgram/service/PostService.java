@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.catsgram.exception.ConditionsNotMetException;
 import ru.yandex.practicum.catsgram.exception.NotFoundException;
 import ru.yandex.practicum.catsgram.model.Post;
+import ru.yandex.practicum.catsgram.model.User;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -13,26 +14,37 @@ import java.util.Map;
 @Service
 public class PostService {
     private final Map<Long, Post> posts = new HashMap<>();
+    private final UserService userService;  // Внедрённая зависимость
+
+    // Конструктор для внедрения UserService
+    public PostService(UserService userService) {
+        this.userService = userService;
+    }
 
     public Collection<Post> findAll() {
         return posts.values();
     }
 
-
     public Post create(Post post) {
-        // проверяем выполнение необходимых условий
         if (post.getDescription() == null || post.getDescription().isBlank()) {
             throw new ConditionsNotMetException("Описание не может быть пустым");
         }
-        // формируем дополнительные данные
+
+        // Проверка существования автора
+        Long authorId = post.getAuthorId();
+        if (authorId == null) {
+            throw new ConditionsNotMetException("Автор должен быть указан");
+        }
+        // Используем новый метод findUserById
+        userService.findUserById(authorId)
+                .orElseThrow(() -> new ConditionsNotMetException("Автор с id = " + authorId + " не найден"));
+
         post.setId(getNextId());
         post.setPostDate(Instant.now());
-        // сохраняем новую публикацию в памяти приложения
         posts.put(post.getId(), post);
         return post;
     }
 
-    // вспомогательный метод для генерации идентификатора нового поста
     private long getNextId() {
         long currentMaxId = posts.keySet()
                 .stream()
@@ -43,7 +55,6 @@ public class PostService {
     }
 
     public Post update(Post newPost) {
-        // проверяем необходимые условия
         if (newPost.getId() == null) {
             throw new ConditionsNotMetException("Id должен быть указан");
         }
@@ -52,7 +63,6 @@ public class PostService {
             if (newPost.getDescription() == null || newPost.getDescription().isBlank()) {
                 throw new ConditionsNotMetException("Описание не может быть пустым");
             }
-            // если публикация найдена и все условия соблюдены, обновляем её содержимое
             oldPost.setDescription(newPost.getDescription());
             return oldPost;
         }
