@@ -28,12 +28,8 @@ public class PostService {
                 .toList();
     }
 
-    public Post findById(Long id) {
-        Post post = posts.get(id);
-        if (post == null) {
-            throw new NotFoundException("Пост с id = " + id + " не найден");
-        }
-        return post;
+    public Optional<Post> findById(Long id) {
+        return Optional.ofNullable(posts.get(id));
     }
 
     public Post create(Post post) {
