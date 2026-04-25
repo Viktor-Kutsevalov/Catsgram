@@ -30,7 +30,7 @@ public class ImageService {
     private final Map<Long, Image> images = new HashMap<>();
 
     // Директория для хранения изображений
-    @Value("${catsgram.image-directory}")
+    @Value("${catsgram.image-directory:images}")
     private String imageDirectory;
 
     // Сохранение списка изображений, связанных с указанным постом
